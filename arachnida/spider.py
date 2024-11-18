@@ -9,30 +9,52 @@ from urllib.parse import urlparse
 from colorama import Fore, Style
 from bs4 import BeautifulSoup as bs
 
+URL_REGEX = r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])'
+FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+
 class Spider:
 
 	def __init__(self, url, path, recursive, depth = 0):
-		if depth and not recursive:
-			self.log("warning", "Depth level set without recursive flag. Ignoring depth level.")
-		if os.path.exists(path) and not os.path.isdir(path):
-			self.log("error", "Invalid path: " + path)
+		try:
+			self.url = self.validate_url(url)
+			self.path = self.validate_path(path)
+		except ValueError as err:
+			self.log("error", str(err))
 			sys.exit(1)
-		elif not os.path.exists(path):
-			os.makedirs(path)
-		if not url.startswith("http") and not url.startswith("ftp") and not url.startswith("https"):
-			self.log("error", "Invalid URL: " + url)
-			sys.exit(1)
-		self.url = url
-		self.path = path
 		self.recursive = recursive
+		self.depth = depth if recursive else 0
+
 		if recursive and depth is None:
-			depth = 5
-		self.depth = depth
+			self.depth = 5
+
 		self.log("info", "Spider initialized with URL: " + url)
 		self.log("info", "Path: " + path)
 		self.log("info", "Recursion: " + str(recursive))
 		self.log("info", "Depth: " + str(depth))
+  
+	@staticmethod
+	def validate_path(path):
+		if os.path.exists(path) and not os.path.isdir(path):
+			raise ValueError(f"Invalid path: {path} (not a directory)")
+		os.makedirs(path, exist_ok=True)
+		return path
 
+	@staticmethod
+	def validate_url(url):
+		if not re.match(URL_REGEX, url):
+			raise ValueError(f"Invalid URL: {url}")
+		return url
+
+	@staticmethod
+	def log(level, message):
+		levels = {
+			"info": Fore.CYAN + "[INFO]   " + Style.RESET_ALL,
+			"warning": Fore.YELLOW + "[WARNING]" + Style.RESET_ALL,
+			"error": 	Fore.RED + "[ERROR]  " + Style.RESET_ALL,
+			"success": Fore.GREEN + "[SUCCESS]" + Style.RESET_ALL
+		}
+		print(levels.get(level, "[UNKNOWN]") + " " + message)
+	
 	def get_url_content(self, url):
 		try:
 			response = requests.get(url)
@@ -42,25 +64,12 @@ class Spider:
 			return None
 		return response.content
 
-	def log(self, level, message):
-		levels = {
-			"info": Fore.CYAN + "[INFO]   " + Style.RESET_ALL,
-			"warning": Fore.YELLOW + "[WARNING]" + Style.RESET_ALL,
-			"error": 	Fore.RED + "[ERROR]  " + Style.RESET_ALL,
-			"success": Fore.GREEN + "[SUCCESS]" + Style.RESET_ALL
-		}
-		print(levels.get(level, "[UNKNOWN]") + " " + message)
-
-	def is_valid_url(self, url):
-		if url.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg')):
-			return True
-		return False
+	@staticmethod
+	def match_file_type(url):
+		return url.lower().endswith(tuple(FILE_EXTENSIONS))
 	
-	def downloadImage(self, url):
-		self.log("info", "Downloading image: " + url)
-		image = self.get_url_content(url)
-		if not image:
-			return
+	def saveImage(self, url, content):
+		self.log("info", "Saving image: " + url)
 		filename = urlparse(url).hostname + urlparse(url).path
 		filepath = os.path.join(self.path, filename)
 		os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -68,56 +77,39 @@ class Spider:
 			self.log("warning", "Image (" + url + ") already exists: " + filepath)
 			return
 		with open(filepath, "wb") as file:
-			file.write(image)
-		self.log("success", "Image downloaded: " + url)
-		if url != self.url and self.recursive:
-			self.crawl_recursive(image, True)
-		if self.recursive:
-			self.crawl_recursive(image, False)
+			file.write(content)
+		self.log("success", "Saved image: " + url)
 
 	def crawl(self):
-		if self.is_valid_url(self.url):
-			self.log("info", "Starting URL is an image.")
-			self.downloadImage(self.url)
-			return;
-		if not self.recursive:
-			self.log("warning", "Recursion disabled. Ignoring links.")
-			return
-		if self.depth == 0:
-			self.log("warning", "Depth level reached. Ignoring links.")
-			return
 		self.log("info", "Crawling: " + self.url)
 		content = self.get_url_content(self.url)
 		if not content:
 			return
+		if self.match_file_type(self.url):
+			self.saveImage(self.url, content)
 		soup = bs(content, "html.parser")
+		if not self.recursive or self.depth <= 0:
+			return
+		urls = []
 		for img in soup.findAll("img"):
 			src = img.get("src")
-			if src:
-				src = self.url + src if src.startswith("/") else src
-				if self.is_valid_url(src):
-					self.downloadImage(src)
-		self.crawl_recursive(content)
-
-	def crawl_recursive(self, content, decrease_depth=False):
-		d = self.depth
-		if d is None or d == 0:
-			print("Depth level reached. Ignoring links." + self.url)
-			return
-		if decrease_depth:
-			d -= 1
-		urls = re.findall(r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])', str(content))
-		for url in urls:
+			if src and src.startswith("/"):
+				urls.append(self.url.rstrip("/") + src)
+		try:
+			regex_urls = re.findall(URL_REGEX, content.decode())
+		except UnicodeDecodeError:
+			regex_urls = []
+		for url in regex_urls:
 			url = url[0] + "://" + url[1] + url[2]
-			if self.is_valid_url(url):
-				self.downloadImage(url)
-			elif self.recursive and d - 1 > 0:
-				s = Spider(url, self.path, self.recursive, d - 1)
+			urls.append(url)
+		for url in urls:
+			print(url)
+			if self.depth - 1 > 0 or self.match_file_type(url):
+				s = Spider(url, self.path, self.recursive, self.depth - 1)
 				s.crawl()
 
 
 if __name__ == "__main__":
-	# parse flags
 	if len(sys.argv) < 2:
 		print("Usage: python spider.py [-r] [-l <depth>] [-p <path>] <url>")
 		sys.exit(1)
