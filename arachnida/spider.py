@@ -114,8 +114,6 @@ class Spider:
 			elif self.recursive and d - 1 > 0:
 				s = Spider(url, self.path, self.recursive, d - 1)
 				s.crawl()
-		if not urls:
-			self.log("warning", "No links found.")
 
 
 if __name__ == "__main__":

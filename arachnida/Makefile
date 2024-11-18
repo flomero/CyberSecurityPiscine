@@ -10,7 +10,8 @@ env:
 	@. $(ENV_DIR)/bin/activate
 	@echo "Installing dependencies..."
 	@pip install -r requirements.txt
-	@which python3
+	@chmod +x spider.py
+	@chmod +x scorpion.py
 	@echo "Done!"
 
 .PHONY: all env clean
