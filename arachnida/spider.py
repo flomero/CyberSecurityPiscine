@@ -2,7 +2,7 @@ import os
 import re
 import sys
 import argparse
-from urllib import request
+import requests
 from urllib.parse import urlparse
 from colorama import Fore, Style
 
@@ -23,7 +23,15 @@ class Spider:
 		self.path = path
 		self.recursive = recursive
 		self.depth = depth
-		print("init with", url, path, recursive, depth)
+
+	def get_url_content(self, url):
+		try:
+			response = requests.get(url)
+			response.raise_for_status()
+		except requests.exceptions.RequestException as err:
+			self.log("error", f"Request error: {err}")
+			return None
+		return response.content
 
 	def log(self, level, message):
 		levels = {
@@ -41,11 +49,9 @@ class Spider:
 	
 	def downloadImage(self, url):
 		self.log("info", "Downloading image: " + url)
-		response = request.urlopen(url)
-		if response.getcode() != 200:
-			self.log("error", "Failed to download image: " + url)
+		image = self.get_url_content(url)
+		if not image:
 			return
-		image = response.read()
 		filename = urlparse(url).hostname + urlparse(url).path
 		filepath = os.path.join(self.path, filename)
 		os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -67,12 +73,10 @@ class Spider:
 			self.log("warning", "Depth level reached. Ignoring links.")
 			return
 		self.log("info", "Crawling: " + self.url)
-		response = request.urlopen(self.url)
-		if response.getcode() != 200:
-			self.log("error", "Failed to crawl: " + self.url)
+		content = self.get_url_content(self.url)
+		if not content:
 			return
-		html = response.read()
-		urls = re.findall(r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])', str(html))
+		urls = re.findall(r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])', str(content))
 		for url in urls:
 			url = url[0] + "://" + url[1] + url[2]
 			if self.is_valid_url(url):
