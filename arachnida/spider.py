@@ -12,6 +12,40 @@ from bs4 import BeautifulSoup as bs
 URL_REGEX = r'(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])'
 FILE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
 
+TAG_ATTR_COMBS = {
+	"a": ["href"],
+	"applet": ["codebase", "archive"],
+	"area": ["href"],
+	"base": ["href"],
+	"blockquote": ["cite"],
+	"body": ["background"],
+	"del": ["cite"],
+	"form": ["action"],
+	"frame": ["longdesc", "src"],
+	"head": ["profile"],
+	"iframe": ["longdesc", "src"],
+	"img": ["longdesc", "src", "usemap", "srcset"],
+	"input": ["src", "usemap", "formaction"],
+	"ins": ["cite"],
+	"link": ["href"],
+	"object": ["classid", "codebase", "data", "usemap", "archive"],
+	"q": ["cite"],
+	"script": ["src"],
+	"audio": ["src"],
+	"button": ["formaction"],
+	"command": ["icon"],
+	"embed": ["src"],
+	"html": ["manifest"],
+	"source": ["src", "srcset"],
+	"track": ["src"],
+	"video": ["poster", "src"],
+	"svg": ["href"],
+	"image": ["href"],
+	"div": ["style"],
+	"span": ["style"],
+	"p": ["style"],
+}
+
 class Spider:
 
 	def __init__(self, url, path, recursive, depth = 0):
@@ -87,14 +121,17 @@ class Spider:
 			return
 		if self.match_file_type(self.url):
 			self.saveImage(self.url, content)
-		soup = bs(content, "html.parser")
 		if not self.recursive or self.depth <= 0:
 			return
+		soup = bs(content, "html.parser")
 		urls = []
-		for img in soup.findAll("img"):
-			src = img.get("src")
-			if src and src.startswith("/"):
-				urls.append(self.url.rstrip("/") + src)
+		for tag, attrs in TAG_ATTR_COMBS.items():
+			for attr in attrs:
+				for link in soup.find_all(tag):
+					if attr in link.attrs:
+						if link[attr].startswith("/"):
+							link[attr] = self.url.rstrip("/") + link[attr]
+							urls.append(link[attr])
 		try:
 			regex_urls = re.findall(URL_REGEX, content.decode())
 		except UnicodeDecodeError:
@@ -102,9 +139,9 @@ class Spider:
 		for url in regex_urls:
 			url = url[0] + "://" + url[1] + url[2]
 			urls.append(url)
+		urls = list(set(urls))
 		for url in urls:
-			print(url)
-			if self.depth - 1 > 0 or self.match_file_type(url):
+			if self.depth - 1 > 0 or (self.depth - 1 == 0 and self.match_file_type(url)):
 				s = Spider(url, self.path, self.recursive, self.depth - 1)
 				s.crawl()
 
