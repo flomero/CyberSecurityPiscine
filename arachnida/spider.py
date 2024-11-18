@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import re
 import sys
@@ -5,6 +7,7 @@ import argparse
 import requests
 from urllib.parse import urlparse
 from colorama import Fore, Style
+from bs4 import BeautifulSoup as bs
 
 class Spider:
 
@@ -84,6 +87,16 @@ class Spider:
 			elif self.recursive and self.depth - 1 > 0:
 				s = Spider(url, self.path, self.recursive, self.depth - 1)
 				s.crawl()
+		if not urls:
+			self.log("warning", "No links found.")
+		if self.url.lower().endswith(('.html', '.htm')):
+			soup = bs.BeautifulSoup(content)
+			for img in soup.findAll("img"):
+				src = img.get("src")
+				if src:
+					src = self.url + src if src.startswith("/") else src
+					self.downloadImage(src)
+
 
 if __name__ == "__main__":
 	# parse flags
