@@ -3,8 +3,10 @@
 # command to run with all jpgs in data directory
 # find data -name "*.jpg" | xargs ./scorpion.py
 
+import datetime
 import os
 import argparse
+from venv import create
 from PIL import Image, ExifTags
 from colorama import Fore, Style
 
@@ -21,8 +23,12 @@ class Scorpion:
 				continue
 			try:
 				image = Image.open(file)
-				exif = image._getexif()
 				print(f"{Fore.GREEN}File: {Style.RESET_ALL}{file}")
+				created = datetime.datetime.fromtimestamp(os.path.getctime(file)).strftime("%Y-%m-%d %H:%M:%S")
+				print(f"{Fore.CYAN}Created: {Style.RESET_ALL}{created}")
+				modified = datetime.datetime.fromtimestamp(os.path.getmtime(file)).strftime("%Y-%m-%d %H:%M:%S")
+				print(f"{Fore.CYAN}Modified: {Style.RESET_ALL}{modified}")
+				exif = image._getexif()
 				print(f"{Fore.CYAN}Format: {Style.RESET_ALL}{image.format}")
 				print(f"{Fore.CYAN}Mode: {Style.RESET_ALL}{image.mode}")
 				print(f"{Fore.CYAN}Size: {Style.RESET_ALL}{image.size}")
