@@ -1,4 +1,5 @@
 ENV_DIR = env
+SHELL := /bin/bash
 
 all: env
 
@@ -9,11 +10,7 @@ env:
 	@. $(ENV_DIR)/bin/activate
 	@echo "Installing dependencies..."
 	@pip install -r requirements.txt
-	@echo "Done!"
-
-clean:
-	@echo "Cleaning up..."
-	@rm -rf $(ENV_DIR)
+	@which python3
 	@echo "Done!"
 
 .PHONY: all env clean
