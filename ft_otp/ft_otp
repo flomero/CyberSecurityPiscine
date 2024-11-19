@@ -10,7 +10,7 @@ from colorama import Fore, Style
 BLOCK_SIZE = 64
 KEY_OUTPUT_FILE = 'ft_otp.key'
 KEY_KEY = b'4mrmELu5dei0I2qDHQ_-S3w5MpRC1vmtEBlwRcOdzTY='
-VERBOSE = True
+VERBOSE = False
 
 def sha1(message: bytes) -> bytes:
 	return hashlib.sha1(message).digest()
@@ -34,9 +34,10 @@ def hmac(key: bytes, message: bytes, func: tp.Callable[[bytes], bytes] = sha1) -
 	return outer
 
 def totp(key: bytes, t: float, digits: int = 6, period: int = 30) -> str:
-	t = int(t / period)
+	t = int(t // period)
 	t = t.to_bytes(8, 'big')
-	h = hmac(key, t)
+	key_bytes = bytes.fromhex(key.decode())
+	h = hmac(key_bytes, t)
 
 	offset = h[-1] & 0xF
 	code = (
@@ -94,4 +95,4 @@ if __name__ == '__main__':
 		except:
 			print(f'{Fore.RED}Invalid key file{Style.RESET_ALL}')
 			exit(1)
-		print(totp(key, t.time()))
+		print(f'{Fore.GREEN}TOTP{Style.RESET_ALL}: {totp(key, t.time())}')
