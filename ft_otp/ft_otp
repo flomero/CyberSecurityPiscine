@@ -5,10 +5,12 @@ import typing as tp
 import hashlib
 import argparse
 from cryptography.fernet import Fernet
+from colorama import Fore, Style
 
 BLOCK_SIZE = 64
 KEY_OUTPUT_FILE = 'ft_otp.key'
 KEY_KEY = b'4mrmELu5dei0I2qDHQ_-S3w5MpRC1vmtEBlwRcOdzTY='
+VERBOSE = True
 
 def sha1(message: bytes) -> bytes:
 	return hashlib.sha1(message).digest()
@@ -32,20 +34,19 @@ def hmac(key: bytes, message: bytes, func: tp.Callable[[bytes], bytes] = sha1) -
 	return outer
 
 def totp(key: bytes, t: float, digits: int = 6, period: int = 30) -> str:
-    t = int(t / period)  # Calculate the time step
-    t = t.to_bytes(8, 'big')  # Convert time step to 8-byte big-endian
-    h = hmac(key, t)  # Generate HMAC
-    
-    # Dynamic truncation
-    offset = h[-1] & 0xF
-    code = (
-        ((h[offset] & 0x7F) << 24) | 
-        ((h[offset + 1] & 0xFF) << 16) | 
-        ((h[offset + 2] & 0xFF) << 8) | 
-        (h[offset + 3] & 0xFF)
-    ) % (10 ** digits)
-    
-    return str(code).zfill(digits)
+	t = int(t / period)
+	t = t.to_bytes(8, 'big')
+	h = hmac(key, t)
+
+	offset = h[-1] & 0xF
+	code = (
+		((h[offset] & 0x7F) << 24) | 
+		((h[offset + 1] & 0xFF) << 16) | 
+		((h[offset + 2] & 0xFF) << 8) | 
+		(h[offset + 3] & 0xFF)
+	) % (10 ** digits)
+	
+	return str(code).zfill(digits)
 
 def encrypt_key(key: bytes) -> bytes:
 	cipher = Fernet(KEY_KEY)
@@ -55,6 +56,14 @@ def decrypt_key(key: bytes) -> bytes:
 	cipher = Fernet(KEY_KEY)
 	return cipher.decrypt(key)
 
+def is_valid_input_key(key: str) -> bool:
+	if len(key) != 64:
+		return False
+	for c in key:
+		if c not in '0123456789abcdef':
+			return False
+	return True
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generate TOTP')
 	parser.add_argument('-g', type=str, help='Key', required=False)
@@ -63,22 +72,26 @@ if __name__ == '__main__':
 	key = args.g.encode() if args.g else None
 	key_file = args.k.encode() if args.k else None
 	if (key is None and key_file is None) or (key is not None and key_file is not None):
-		print('Wrong input. Please provide key OR key file')
+		print(f'{Fore.RED}Invalid arguments{Style.RESET_ALL}')
 		parser.print_help()
 		exit(1)
 	if key:
+		if not is_valid_input_key(key.decode()):
+			print(f'{Fore.RED}Invalid key{Style.RESET_ALL}')
+			exit(1)
 		with open(KEY_OUTPUT_FILE, 'wb') as f:
 			f.write(encrypt_key(key))
-		print('Key saved to', KEY_OUTPUT_FILE)
+		print(f'{Fore.GREEN}Key saved to {KEY_OUTPUT_FILE}{Style.RESET_ALL}')
 	elif key_file:
 		with open(key_file, 'rb') as f:
 			key = f.read()
 		try:
 			key = decrypt_key(key)
-			if not key:
+			if not key or not is_valid_input_key(str(key, 'utf-8')):
 				raise Exception()
-			print('Key:', key)
+			if VERBOSE:
+				print(f'{Fore.GREEN}Key decrypted{Style.RESET_ALL}: {key}')
 		except:
-			print('Invalid key file')
+			print(f'{Fore.RED}Invalid key file{Style.RESET_ALL}')
 			exit(1)
 		print(totp(key, t.time()))
