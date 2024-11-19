@@ -70,13 +70,19 @@ if __name__ == '__main__':
 	parser.add_argument('-g', type=str, help='Key', required=False)
 	parser.add_argument('-k', type=str, help='Key File', required=False)
 	args = parser.parse_args()
-	key = args.g.encode() if args.g else None
+	key_path = args.g.encode() if args.g else None
 	key_file = args.k.encode() if args.k else None
-	if (key is None and key_file is None) or (key is not None and key_file is not None):
+	if (key_path is None and key_file is None) or (key_path is not None and key_file is not None):
 		print(f'{Fore.RED}Invalid arguments{Style.RESET_ALL}')
 		parser.print_help()
 		exit(1)
-	if key:
+	if key_path:
+		try:
+			with open(key_path, 'rb') as f:
+				key = f.read()
+		except:
+			print(f'{Fore.RED}Invalid key path{Style.RESET_ALL}')
+			exit(1)
 		if not is_valid_input_key(key.decode()):
 			print(f'{Fore.RED}Invalid key{Style.RESET_ALL}')
 			exit(1)
