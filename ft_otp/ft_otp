@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import time as t
+import typing as tp
+import hashlib
+
+BLOCK_SIZE = 64
+
+def sha1(message: bytes) -> bytes:
+	return hashlib.sha1(message).digest()
+
+def kxor(a: bytes, b: bytes) -> bytes:
+	return bytes([x ^ y for x, y in zip(a, b)])
+
+def hmac(key: bytes, message: bytes, func: tp.Callable[[bytes], bytes] = sha1) -> bytes:
+	ipad = b'\x36' * BLOCK_SIZE
+	opad = b'\x5c' * BLOCK_SIZE
+	if len(key) > BLOCK_SIZE:
+		key = func(key)
+	if len(key) < BLOCK_SIZE:
+		key += b'\x00' * (BLOCK_SIZE - len(key))
+	inner = kxor(key, ipad)
+	inner += message
+	inner = func(inner)
+	outer = kxor(key, opad)
+	outer += inner
+	outer = func(outer)
+	return outer
