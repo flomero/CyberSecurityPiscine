@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
+import qrcode
+import base64
 import time as t
 import typing as tp
 import hashlib
 import argparse
 from cryptography.fernet import Fernet
 from colorama import Fore, Style
+import os
 
 BLOCK_SIZE = 64
 KEY_OUTPUT_FILE = 'ft_otp.key'
 KEY_KEY = b'4mrmELu5dei0I2qDHQ_-S3w5MpRC1vmtEBlwRcOdzTY='
 VERBOSE = False
+ISSUER = 'ft_otp'
 
 def sha1(message: bytes) -> bytes:
 	return hashlib.sha1(message).digest()
@@ -65,40 +69,85 @@ def is_valid_input_key(key: str) -> bool:
 			return False
 	return True
 
+def save_to_file(path: str) -> None:
+	try:
+		with open(path, 'rb') as f:
+			key = f.read()
+	except:
+		print(f'{Fore.RED}Invalid key path{Style.RESET_ALL}')
+		exit(1)
+	if not is_valid_input_key(key.decode()):
+		print(f'{Fore.RED}Invalid key{Style.RESET_ALL}')
+		exit(1)
+	try:
+		with open(KEY_OUTPUT_FILE, 'wb') as f:
+			f.write(encrypt_key(key))
+	except:
+		print(f'{Fore.RED}Failed to save key{Style.RESET_ALL}')
+		exit(1)
+	print(f'{Fore.GREEN}Key saved to {KEY_OUTPUT_FILE}{Style.RESET_ALL}')
+	key = bytes.fromhex(key.decode())
+	generate_qr_code(key)
+
+
+def generate_qr_code(key: bytes) -> None:
+	key_base32 = base64.b32encode(key).decode('utf-8')
+	otp_uri = f'otpauth://totp/{ISSUER}?secret={key_base32}'
+	qr = qrcode.QRCode(
+		version=1,
+		error_correction=qrcode.constants.ERROR_CORRECT_L,
+		box_size=10,
+		border=4,
+	)
+	qr.add_data(otp_uri)
+	qr.make(fit=True)
+	qr.print_ascii()
+
+ 
+def get_totp(file: str) -> None:
+	with open(key_file, 'rb') as f:
+		key = f.read()
+	try:
+		key = decrypt_key(key)
+		if not key or not is_valid_input_key(str(key, 'utf-8')):
+			raise Exception()
+		if VERBOSE:
+			print(f'{Fore.GREEN}Key decrypted{Style.RESET_ALL}: {key}')
+	except:
+		print(f'{Fore.RED}Invalid key file{Style.RESET_ALL}')
+		exit(1)
+	print(f'{Fore.GREEN}TOTP{Style.RESET_ALL}: {totp(key, t.time())}')
+ 
+def generate_random_key() -> None:
+	key = os.urandom(32)
+	key_hex = key.hex()
+	print(f'{Fore.GREEN}Generated Key (Hex): {key_hex}{Style.RESET_ALL}')
+	try:
+		with open(KEY_OUTPUT_FILE, 'wb') as f:
+			f.write(encrypt_key(key_hex.encode()))
+	except Exception as e:
+		print(f'{Fore.RED}Failed to save key: {e}{Style.RESET_ALL}')
+		exit(1)
+	print(f'{Fore.GREEN}Key saved to {KEY_OUTPUT_FILE}{Style.RESET_ALL}')
+	generate_qr_code(bytes.fromhex(key_hex))
+
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Generate TOTP')
 	parser.add_argument('-g', type=str, help='Key', required=False)
 	parser.add_argument('-k', type=str, help='Key File', required=False)
+	parser.add_argument('-r', action='store_true', help='Generate random key', required=False)
 	args = parser.parse_args()
 	key_path = args.g.encode() if args.g else None
 	key_file = args.k.encode() if args.k else None
-	if (key_path is None and key_file is None) or (key_path is not None and key_file is not None):
+	random = args.r
+	if sum([bool(key_path), bool(key_file), random]) != 1:
 		print(f'{Fore.RED}Invalid arguments{Style.RESET_ALL}')
 		parser.print_help()
 		exit(1)
 	if key_path:
-		try:
-			with open(key_path, 'rb') as f:
-				key = f.read()
-		except:
-			print(f'{Fore.RED}Invalid key path{Style.RESET_ALL}')
-			exit(1)
-		if not is_valid_input_key(key.decode()):
-			print(f'{Fore.RED}Invalid key{Style.RESET_ALL}')
-			exit(1)
-		with open(KEY_OUTPUT_FILE, 'wb') as f:
-			f.write(encrypt_key(key))
-		print(f'{Fore.GREEN}Key saved to {KEY_OUTPUT_FILE}{Style.RESET_ALL}')
+		save_to_file(key_path)
 	elif key_file:
-		with open(key_file, 'rb') as f:
-			key = f.read()
-		try:
-			key = decrypt_key(key)
-			if not key or not is_valid_input_key(str(key, 'utf-8')):
-				raise Exception()
-			if VERBOSE:
-				print(f'{Fore.GREEN}Key decrypted{Style.RESET_ALL}: {key}')
-		except:
-			print(f'{Fore.RED}Invalid key file{Style.RESET_ALL}')
-			exit(1)
-		print(f'{Fore.GREEN}TOTP{Style.RESET_ALL}: {totp(key, t.time())}')
+		get_totp(key_file)
+	elif random:
+		generate_random_key()
