@@ -1,6 +1,6 @@
 Port 4242
 UseDNS no
 PermitRootLogin yes
-PasswordAuthentication no
+PasswordAuthentication yes
 ChallengeResponseAuthentication no
 PubkeyAuthentication no
