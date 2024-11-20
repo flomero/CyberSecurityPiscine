@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8080:80"
+      - "4243:4242"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./www:/var/www
+    networks:
+      - ft_onion
+  tor:
+    build: .
+    container_name: tor
+    volumes:
+      - ./torrc:/etc/tor/torrc
+    networks:
+      - ft_onion
+    command: tor -f /etc/tor/torrc
+
+networks:
+  ft_onion:
+    driver: bridge
