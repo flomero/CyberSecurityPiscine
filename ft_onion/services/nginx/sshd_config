@@ -3,3 +3,4 @@ UseDNS no
 PermitRootLogin yes
 PasswordAuthentication no
 ChallengeResponseAuthentication no
+PubkeyAuthentication no

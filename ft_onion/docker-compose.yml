@@ -1,17 +1,18 @@
 services:
   nginx:
-    image: nginx:latest
+    build: services/nginx
     container_name: nginx
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./www:/var/www
+      - ./services/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./services/nginx/sshd_config:/etc/ssh/sshd_config
+      - ./services/www:/var/www
     networks:
       - ft_onion
   tor:
-    build: .
+    build: services/tor
     container_name: tor
     volumes:
-      - ./torrc:/etc/tor/torrc
+      - ./services/tor/torrc:/etc/tor/torrc
     networks:
       - ft_onion
     command: tor -f /etc/tor/torrc
