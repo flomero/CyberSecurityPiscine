@@ -1,0 +1,5 @@
+Port 4242
+UseDNS no
+PermitRootLogin yes
+PasswordAuthentication no
+ChallengeResponseAuthentication no
