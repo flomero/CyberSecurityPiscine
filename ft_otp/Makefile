@@ -11,10 +11,10 @@ env:
 	@echo "Activating virtual environment..."
 	@echo "Installing dependencies..."
 	@$(ACTIVATE) && pip install -r requirements.txt
-	@chmod +x spider.py
-	@chmod +x scorpion.py
+	@chmod +x ft_otp
 	@$(ACTIVATE) && which python3
 	@echo "Done!"
+	@echo "To activate the virtual environment, run: . $(ENV_DIR)/bin/activate"
 
 clean:
 	@echo "Cleaning up..."
