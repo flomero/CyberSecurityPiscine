@@ -3,8 +3,8 @@ from debian:bullseye
 RUN apt update && apt upgrade -y && apt install -y \
 	tor
 
-EXPOSE 9050
+RUN useradd -ms /bin/bash toruser
+RUN chown -R toruser:toruser /etc/tor /var/lib/tor /var/log/tor
 
-USER tor
-
-CMD ["tor", "-f", "/etc/tor/torrc"]
+USER toruser
+CMD service tor start

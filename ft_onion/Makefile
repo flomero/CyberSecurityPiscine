@@ -31,4 +31,4 @@ run-tor:
 
 .PHONY: all up address down logs clean fclean download-tor
 
-# ssh -p 4242 -o ProxyCommand='nc -x 127.0.0.1:9050 %h %p' 
+# ssh -p 4242 -o ProxyCommand='nc -x 127.0.0.1:9150 %h %p' 
