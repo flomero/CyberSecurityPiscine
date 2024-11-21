@@ -3,5 +3,5 @@ services:
     build: .
     container_name: stockholm-system
     volumes:
-      - ./src:/
-      - ./Makefile:/
+      - ./src:/root
+    tty: true

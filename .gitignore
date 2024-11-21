@@ -7,3 +7,6 @@
 */tor-browser/**/*
 reverseme/bin/*
 *.out
+/stockholm/src/*
+!/stockholm/src/Makefile
+!/stockholm/src/stockholm.py
