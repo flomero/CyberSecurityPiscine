@@ -5,3 +5,5 @@
 *.key
 *.hex
 */tor-browser/**/*
+reverseme/bin/*
+*.out
