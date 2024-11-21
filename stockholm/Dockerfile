@@ -7,6 +7,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN python3 -m venv /opt/venv
 RUN /opt/venv/bin/pip install --upgrade pip
-RUN /opt/venv/bin/pip install argparse colorama
+RUN /opt/venv/bin/pip install argparse colorama cryptography
 
 ENV PATH="/opt/venv/bin:$PATH"
