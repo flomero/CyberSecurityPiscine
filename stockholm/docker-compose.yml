@@ -1,0 +1,7 @@
+services:
+  stockholm-system:
+    build: .
+    container_name: stockholm-system
+    volumes:
+      - ./src:/
+      - ./Makefile:/
