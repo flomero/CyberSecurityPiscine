@@ -13,6 +13,15 @@ int	ok(void)
 	return (puts("Good job."));
 }
 
+typedef struct s_ascii_val
+{
+	char a;
+	char b;
+	char c;
+	char d;
+} ascii_val;
+
+
 int	main(int argc, const char **argv, const char **envp)
 {
 	int				bytes_read;
@@ -21,15 +30,13 @@ int	main(int argc, const char **argv, const char **envp)
 	int				decoded_length;
 	int				is_valid_input;
 	unsigned int	temp_pos;
-	char			digit_char;
-	char			digit_char_next;
-	char			digit_char_next2;
-	char			null_byte;
+	ascii_val		asc;
 	char			user_input[24];
 	char			decoded_key[9];
 	int				digit_value;
 	int				input_length;
 
+	asc.d = '\0';
 	printf("Please enter key: ");
 	bytes_read = scanf("%23s", user_input);
 	if (bytes_read != 1)
@@ -57,11 +64,10 @@ int	main(int argc, const char **argv, const char **envp)
 		if (!is_valid_input)
 			break ;
 		// Read and convert three characters at a time
-		digit_char = user_input[input_pos];
-		digit_char_next = user_input[input_pos + 1];
-		digit_char_next2 = user_input[input_pos + 2];
-		null_byte = '\0';
-		digit_value = atoi(&digit_char);
+		asc.a = user_input[temp_pos];
+		asc.b = user_input[temp_pos + 1];
+		asc.c = user_input[temp_pos + 2];
+		digit_value = atoi(&asc.a);
 		decoded_key[decoded_index] = (char)digit_value;
 		input_pos += 3;
 		decoded_index++;
