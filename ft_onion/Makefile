@@ -1,33 +1,31 @@
 all: up
 
 up:
-	docker-compose up -d
+	@chmod 777 services/www/*
+	@docker-compose up -d
 
 address:
 	@docker-compose exec tor cat /var/lib/tor/hidden_service/hostname
 
 down:
-	docker-compose down
+	@docker-compose down
 
 stop:
-	docker-compose stop
+	@docker-compose stop
 
 clean:
-	docker-compose down -v
+	@docker-compose down -v
 
 fclean:
-	docker system prune -a
+	@docker system prune -a
 
 logs:
-	docker-compose logs -f
+	@docker-compose logs -f
 
 download-tor:
-	curl -O https://dist.torproject.org/torbrowser/14.0.2/tor-browser-linux-x86_64-14.0.2.tar.xz
-	tar -xf tor-browser-linux-x86_64-14.0.2.tar.xz
-	rm tor-browser-linux-x86_64-14.0.2.tar.xz
-
-run-tor:
-	cd tor-browser && ./start-tor-browser.desktop
+	@curl -O https://dist.torproject.org/torbrowser/14.0.2/tor-browser-linux-x86_64-14.0.2.tar.xz
+	@tar -xf tor-browser-linux-x86_64-14.0.2.tar.xz
+	@rm tor-browser-linux-x86_64-14.0.2.tar.xz
 
 .PHONY: all up address down logs clean fclean download-tor
 
