@@ -20,4 +20,19 @@ fclean:
 logs:
 	@docker-compose logs -f
 
-.PHONY: all up address down logs clean fclean
+create-dummy-files:
+	@mkdir -p ./infection
+	@echo "Hello\nI'm a file." > ./infection/hello.msg
+	@echo "aaaaaaaaaahhhh help me" > ./infection/flag.txt
+	@echo "i wanna cry" > ./infection/test.txt
+	@echo "i'm fineeeee" > ./infection/hihi.exe
+	@mkdir -p ./infection/inner
+	@echo "Hello\nI'm a file." > ./infection/inner/another.txt
+	@echo "echo hallo" > ./infection/inner/script.sh
+	@mkdir -p ./infection/c
+	@echo "int main() { return 0; }" > ./infection/c/helloworld.c
+
+remove-dummy-files:
+	@rm -rf ./infection
+
+.PHONY: all up address down logs clean fclean create-dummy-files remove-dummy-files
