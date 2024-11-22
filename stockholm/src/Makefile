@@ -31,6 +31,8 @@ create-dummy-files:
 	@echo "echo hallo" > ./infection/inner/script.sh
 	@mkdir -p ./infection/c
 	@echo "int main() { return 0; }" > ./infection/c/helloworld.c
+	@curl -L https://gist.githubusercontent.com/MattIPv4/045239bc27b16b2bcf7a3a9a4648c08a/raw/2411e31293a35f3e565f61e7490a806d4720ea7e/bee%2520movie%2520script > ./infection/bee_movie.txt
+	@curl -L https://upload.wikimedia.org/wikipedia/en/e/ed/Nyan_cat_250px_frame.PNG > ./infection/nyan_cat.png
 
 remove-dummy-files:
 	@rm -rf ./infection
