@@ -3,22 +3,22 @@ import argparse
 import ipaddress
 import signal
 import logging
+import time
 import typing
 import re
 from colorama import Fore, Style
-from scapy.all import ARP, send, sniff, TCP, Raw, IP
+from scapy.all import ARP, send, sniff, TCP, Raw
 
+# Disable scapy warnings
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
 
-INCOMING = False
-OUTGOING = True
-
 class Inquisitor:
-	def __init__(self, ipsrc: str, macsrc: str, ipdst: str, macdst: str) -> None:
+	def __init__(self, ipsrc: str, macsrc: str, ipdst: str, macdst: str, verbose: bool) -> None:
 		self.ipsrc = ipsrc
 		self.macsrc = macsrc
 		self.ipdst = ipdst
 		self.macdst = macdst
+		self.verbose = verbose
 		if not self.check_ip(self.ipsrc):
 			self.log('error', 'Invalid IP address for source')
 			raise SystemExit(1)
@@ -39,8 +39,11 @@ class Inquisitor:
 			"error": 	Fore.RED + "[ERROR]  " + Style.RESET_ALL,
 			"success": Fore.GREEN + "[SUCCESS]" + Style.RESET_ALL,
 			"log": 		Fore.BLUE + "[LOG]    " + Style.RESET_ALL,
+			"verbose": Fore.MAGENTA + "[VERBOSE]" + Style.RESET_ALL
 		}
-		print(levels.get(level, "[UNKNOWN]") + " " + message)
+		if self.verbose or level != 'verbose':
+			timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+			print(timestamp + ' ' + levels.get(level, "[UNKNOWN]") + " " + message)
 
 	@staticmethod
 	def check_ip(ip: str) -> bool:
@@ -76,7 +79,7 @@ class Inquisitor:
 	def packet_handler(self, packet: typing.Any) -> None:
 		try:
 			if packet.haslayer(TCP) and packet.haslayer(Raw):
-				raw_data = packet[Raw].load
+				raw_data = bytes(packet[Raw].load)
 				str_raw_data = raw_data.decode('utf-8', errors='ignore')
 				str_raw_data = str_raw_data.replace('\n', '').replace('\r', '')
 				if 'RETR' in str_raw_data:
@@ -84,7 +87,7 @@ class Inquisitor:
 				elif 'STOR' in str_raw_data:
 					self.log('log', f"FTP upload detected): {str_raw_data}")
 				else:
-					self.log('log', f"Packet detected: {str_raw_data}")
+					self.log('verbose', f"Packet detected: {str_raw_data}")
 		except Exception as e:
 			self.log('error', f"Error handling packet: {e}")
 
@@ -114,9 +117,10 @@ def main() -> None:
 	parser.add_argument('macsrc', help='Source MAC address', type=str)
 	parser.add_argument('ipdst', help='Destination IP address', type=str)
 	parser.add_argument('macdst', help='Destination MAC address', type=str)
+	parser.add_argument('-v', '--verbose', help='Enable verbose output', action='store_true')
 	args = parser.parse_args()
 
-	inquisitor = Inquisitor(args.ipsrc, args.macsrc, args.ipdst, args.macdst)
+	inquisitor = Inquisitor(args.ipsrc, args.macsrc, args.ipdst, args.macdst, args.verbose)
 	inquisitor.start()
 
 

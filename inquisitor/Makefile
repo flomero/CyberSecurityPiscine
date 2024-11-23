@@ -16,4 +16,11 @@ clean:
 logs:
 	docker-compose logs -f
 
+arp:
+	@echo client
+	@docker exec -it ftp_client arp -a
+	@echo "---------------------------------"
+	@echo server
+	@docker exec -it ftp_server arp -a
+
 .PHONY: build up down clean logs
