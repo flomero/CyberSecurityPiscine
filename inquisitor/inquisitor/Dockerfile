@@ -19,3 +19,5 @@ RUN /opt/venv/bin/pip install \
     colorama
 
 ENV PATH="/opt/venv/bin:$PATH"
+
+RUN echo "alias inquisitor='./inquisitor.py 10.10.0.102 00:00:00:00:00:02 10.10.0.103 00:00:00:00:00:03'" >> ~/.bashrc
