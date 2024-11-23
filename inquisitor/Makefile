@@ -13,4 +13,7 @@ clean:
 	docker-compose down -v
 	docker system prune -f
 
-.PHONY: build up down clean
+logs:
+	docker-compose logs -f
+
+.PHONY: build up down clean logs

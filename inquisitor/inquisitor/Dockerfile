@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y \
     tcpdump libpcap-dev iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
 
 # Run the inquisitor program
-CMD ["python", "inquisitor.py"]
+#CMD ["python", "inquisitor.py"]
+cmd ["tail", "-f", "/dev/null"]
