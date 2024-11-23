@@ -1,4 +1,29 @@
 #!./env/bin/python3
 
+import argparse
+
+DEFAULT_OUTPUT_FILE = 'report.txt'
+
 if __name__ == '__main__':
-	print("Vaccine")
+	parser = argparse.ArgumentParser(
+		description='Vaccine',
+		epilog='A little program to find possible sql injection in a given Website')
+	parser.add_argument(
+		'url',
+		help='The url to check')
+	parser.add_argument(
+		'-X',
+		'--request',
+		help='The request to send',
+		default='GET',
+		choices=['GET', 'POST'],
+		type=str.upper)
+	parser.add_argument(
+		'-o',
+		'--output',
+		help='The output file to save the result',
+		type=argparse.FileType('w'),
+		default=DEFAULT_OUTPUT_FILE,
+		metavar='FILE')
+	args = parser.parse_args()
+	print(args.vaccine)
