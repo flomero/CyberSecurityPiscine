@@ -7,8 +7,14 @@ RUN apt-get update && apt-get install -y \
     tcpdump libpcap-dev iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
-# RUN pip install --no-cache-dir -r requirements.txt
+    RUN apt-get clean
 
-# Run the inquisitor program
-#CMD ["python", "inquisitor.py"]
-cmd ["tail", "-f", "/dev/null"]
+RUN python3 -m venv /opt/venv
+RUN /opt/venv/bin/pip install --upgrade pip
+RUN /opt/venv/bin/pip install \
+    scapy \
+    argparse \
+    ipaddress \
+    typing
+
+ENV PATH="/opt/venv/bin:$PATH"

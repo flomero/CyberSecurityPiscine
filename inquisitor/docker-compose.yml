@@ -5,7 +5,6 @@ services:
     privileged: true
     volumes:
       - ./inquisitor/inquisitor.py:/app/inquisitor.py
-      - ./inquisitor/requirements.txt:/app/requirements.txt
     networks:
       inquisitor:
         ipv4_address: 10.10.0.101
