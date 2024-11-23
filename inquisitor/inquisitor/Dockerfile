@@ -15,6 +15,7 @@ RUN /opt/venv/bin/pip install \
     scapy \
     argparse \
     ipaddress \
-    typing
+    typing \
+    colorama
 
 ENV PATH="/opt/venv/bin:$PATH"
