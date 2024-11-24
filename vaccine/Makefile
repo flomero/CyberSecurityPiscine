@@ -19,4 +19,20 @@ clean:
 	@rm -rf $(ENV_DIR)
 	@echo "Done!"
 
-.PHONY: all env clean
+run-dbs:
+	docker compose -f mysql/docker-compose.yml up -d
+	docker compose -f sqlite/docker-compose.yml up -d
+
+myslq-logs:
+	docker compose -f mysql/docker-compose.yml logs
+
+sqlite-logs:
+	docker compose -f sqlite/docker-compose.yml logs
+
+db-logs: mysql-logs sqlite-logs
+
+stop-dbs:
+	docker compose -f mysql/docker-compose.yml down
+	docker compose -f sqlite/docker-compose.yml down
+
+.PHONY: all env clean run-dbs mysql-logs sqlite-logs stop-dbs
