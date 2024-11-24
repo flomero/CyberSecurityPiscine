@@ -34,7 +34,11 @@ class Vaccine:
 			'vulnerable': False,
 			'dbname': None,
 			'method': request,
-			'tests': []
+			'tests': {
+				'basic-error': [],
+				'union': [],
+				'boolean': [],
+			}
 		}
 		self.session = requests.Session()
 		self.session.headers.update({
@@ -137,7 +141,7 @@ class Vaccine:
 					self.log('verbose', f'No error for payload {test}')
 					continue
 				self.find_db_type(response.text)
-				self.result['tests'].append({
+				self.result['tests']['basic-error'].append({
 					'payload': test,
 					'error': error,
 					'formurl': form['action'],
