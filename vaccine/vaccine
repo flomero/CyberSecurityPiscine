@@ -2,8 +2,6 @@
 
 import argparse
 import difflib
-from re import S
-from unittest.mock import DEFAULT
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -30,11 +28,12 @@ class Vaccine:
 	def __init__(self, url, request, output, verbose: bool, limit_diff: int, agent: str):
 		self.url = url
 		self.request = request
-		self.output = output
+		self.output_file = output
 		self.verbose = verbose
 		self.limit_diff = limit_diff
 		self.result = {
 			'url': url,
+			'timestamp': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()),
 			'vulnerable': False,
 			'dbname': None,
 			'method': request,
@@ -50,6 +49,8 @@ class Vaccine:
 		})
 		self.forms = self.get_forms()
 		try:
+			if output:
+				self.output = open(output, 'w')
 			self.run()
 		except Exception as e:
 			print(e)
@@ -124,6 +125,10 @@ class Vaccine:
 			if error in response.text:
 				self.result['vulnerable'] = True
 				self.log('success', f'Found possible sql injection in {response.url}')
+				if error == 'invalid SQL statement' or error == 'unrecognized token':
+					self.result['dbname'] = 'sqlite'
+				elif error == 'You have an error in your SQL syntax':
+					self.result['dbname'] = 'mysql'
 				return error
 		return None
 		
@@ -170,6 +175,8 @@ class Vaccine:
 		"""
 		Test payloads that use UNION SELECT to get data from the database
 		"""
+		if key not in test_injections:
+			return
 		for form in self.forms:
 			for test in test_injections[key]:
 				data = {}
@@ -202,6 +209,8 @@ class Vaccine:
 				if len(diff_lines) > self.limit_diff:
 					diff_lines = diff_lines[:self.limit_diff]
 				if diff_lines:
+					if key not in self.result['tests']:
+						self.result['tests'][key] = []
 					self.result['tests'][key].append({
 						'payload': test,
 						'formurl': form['action'],
@@ -221,6 +230,10 @@ class Vaccine:
 		self.test_error_payloads()
 		self.test_diff_payloads('union')
 		self.test_diff_payloads('boolean')
+		if self.result['dbname'] == 'mysql':
+			self.test_diff_payloads('mysql')
+		elif self.result['dbname'] == 'sqlite':
+			self.test_diff_payloads('sqlite')
 		self.save_result()
 
 
@@ -243,7 +256,7 @@ if __name__ == '__main__':
 		'-o',
 		'--output',
 		help='The output file to save the result',
-		type=argparse.FileType('w'),
+		type=str,
 		default=DEFAULT_OUTPUT_FILE,
 		metavar='FILE')
 	parser.add_argument(
