@@ -1,0 +1,29 @@
+services:
+  app:
+    build: 
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    volumes:
+      - ./app:/app
+    networks:
+      - mysqlnet
+  db:
+    build:
+      dockerfile: Database.Dockerfile
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: testdb
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - mysqlnet
+
+volumes:
+  db_data:
+
+networks:
+  mysqlnet:
+    driver: bridge
