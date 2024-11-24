@@ -1,10 +1,52 @@
 #!./env/bin/python3
 
 import argparse
+import re
 from bs4 import BeautifulSoup
+import requests
+import json
+from testpayloads import test_injections
+import typing
 
 DEFAULT_OUTPUT_FILE = 'report.json'
 
+class Vaccine:
+	def __init__(self, url, request, output):
+		self.url = url
+		self.request = request
+		self.output = output
+		self.result = []
+		self.session = requests.Session()
+		self.session.headers.update({
+			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+		})
+		self.dbname = ''
+		self.forms = self.get_forms()
+		try:
+			self.run()
+		except Exception as e:
+			print(e)
+	
+	def get_forms(self) -> typing.List[dict]:
+		response = self.session.get(self.url)
+		soup = BeautifulSoup(response.text, 'html.parser')
+		forms = soup.find_all('form')
+		form_details = []
+
+		for form in forms:
+			action = form.get('action') if form.get('action') else self.url
+			if action.startswith('/'):
+				action = self.url + action
+			form_details.append({
+				'action': action,
+				'method': form.get('method').strip().upper(),
+				'inputs': [input.get('name') for input in form.find_all('input')]
+			})
+
+		return form_details
+
+	def run(self) -> None:
+		print(self.forms)
 
 
 if __name__ == '__main__':
@@ -29,3 +71,4 @@ if __name__ == '__main__':
 		default=DEFAULT_OUTPUT_FILE,
 		metavar='FILE')
 	args = parser.parse_args()
+	Vaccine(args.url, args.request, args.output)

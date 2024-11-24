@@ -1,5 +1,5 @@
 test_injections = {
-	"basic": [
+	"basic": [ # basic payloads using sql errors to identify if injection is possible
 		"'",
 		"''",
 		"`",
@@ -28,8 +28,6 @@ test_injections = {
 		"'''''''''''''UNION SELECT '2",
 		"%00",
 		"/*…*/",
-	],
-	"error": [
 		# divide by zero
 		"1/0",
 		"1/0 --",
