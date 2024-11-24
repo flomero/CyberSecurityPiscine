@@ -1,32 +1,73 @@
 #!./env/bin/python3
 
 import argparse
-import re
+import stat
 from bs4 import BeautifulSoup
 import requests
 import json
 from testpayloads import test_injections
 import typing
+from colorama import Fore, Style
+import time
 
 DEFAULT_OUTPUT_FILE = 'report.json'
 
+ERROR_STRINGS = [
+    "You have an error in your SQL syntax",  # MySQL
+    "mysql_fetch_array()",  # MySQL
+    "SQL syntax",  # Generic error, especially for MySQL
+    "Warning: mysql_",  # MySQL errors
+    "invalid SQL statement",  # SQLite
+    "could not execute statement",  # SQLite
+    " syntax error",  # SQLite
+    "unrecognized token",  # SQLite
+]
+
 class Vaccine:
-	def __init__(self, url, request, output):
+	def __init__(self, url, request, output, verbose: bool):
 		self.url = url
 		self.request = request
 		self.output = output
-		self.result = []
+		self.verbose = verbose
+		self.result = {
+			'url': url,
+			'vulnerable': False,
+			'dbname': None,
+			'method': request,
+			'tests': []
+		}
 		self.session = requests.Session()
 		self.session.headers.update({
 			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
 		})
-		self.dbname = ''
 		self.forms = self.get_forms()
 		try:
 			self.run()
 		except Exception as e:
 			print(e)
-	
+
+	@staticmethod
+	def build_url(base: str, path: str) -> str:
+		if base.endswith('/') and path.startswith('/'):
+			return base + path[1:]
+		elif not base.endswith('/') and not path.startswith('/'):
+			return base + '/' + path
+		else:
+			return base + path
+
+	def log(self, level: str, message: str):
+		levels = {
+			"info": Fore.CYAN + "[INFO]   " + Style.RESET_ALL,
+			"warning": Fore.YELLOW + "[WARNING]" + Style.RESET_ALL,
+			"error": 	Fore.RED + "[ERROR]  " + Style.RESET_ALL,
+			"success": Fore.GREEN + "[SUCCESS]" + Style.RESET_ALL,
+			"log": 		Fore.BLUE + "[LOG]    " + Style.RESET_ALL,
+			"verbose": Fore.MAGENTA + "[VERBOSE]" + Style.RESET_ALL
+		}
+		if self.verbose or level != 'verbose':
+			timestamp = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())
+			print(timestamp + ' ' + levels.get(level, "[UNKNOWN]") + " " + message)
+
 	def get_forms(self) -> typing.List[dict]:
 		response = self.session.get(self.url)
 		soup = BeautifulSoup(response.text, 'html.parser')
@@ -36,7 +77,7 @@ class Vaccine:
 		for form in forms:
 			action = form.get('action') if form.get('action') else self.url
 			if action.startswith('/'):
-				action = self.url + action
+				action = self.build_url(self.url, action)
 			form_details.append({
 				'action': action,
 				'method': form.get('method').strip().upper(),
@@ -45,8 +86,73 @@ class Vaccine:
 
 		return form_details
 
+	def find_db_type(self, str):
+		str	= str.lower()
+		if self.result['dbname']:
+			return
+		if 'mysql' in str:
+			self.result['dbname'] = 'mysql'
+		elif 'mssql' in str:
+			self.result['dbname'] = 'mssql'
+		elif 'sqlite' in str:
+			self.result['dbname'] = 'sqlite'
+		elif 'oracle' in str:
+			self.result['dbname'] = 'oracle'
+		elif 'postgresql' in str:
+			self.result['dbname'] = 'postgresql'
+		if self.result['dbname']:
+			self.log('success', f'Found database type: {self.result["dbname"]}')
+
+	def find_error(self, response) -> str:
+		for error in ERROR_STRINGS:
+			if error in response.text:
+				self.result['vulnerable'] = True
+				self.log('success', f'Found possible sql injection in {response.url}')
+				return error
+		return None
+		
+	
+	def save_result(self):
+		if self.output:
+			self.output.write(json.dumps(self.result, indent=4))
+			self.log('success', f'Result saved in {self.output.name}')
+		else:
+			print(json.dumps(self.result, indent=4))
+
+	def test_error_payloads(self):
+		"""
+		Test basic payloads that lead to errors in the response
+		"""
+		for form in self.forms:
+			for test in test_injections["error"]:
+				data = {}
+				for input in form['inputs']:
+					data[input] = test
+				if form['method'] == 'GET':
+					response = self.session.get(form['action'], params=data)
+				elif form['method'] == 'POST':
+					response = self.session.post(form['action'], data=data)
+				error = self.find_error(response)
+				if not error:
+					self.log('verbose', f'No error for payload {test}')
+					continue
+				self.find_db_type(response.text)
+				self.result['tests'].append({
+					'payload': test,
+					'error': error,
+					'formurl': form['action'],
+					'status': response.status_code
+				})
+				self.log('success', f'Found possible sql injection in {form["action"]}')
+				
+
 	def run(self) -> None:
-		print(self.forms)
+		if not self.forms:
+			self.log('error', 'No form found')
+			return
+		self.test_error_payloads()
+		self.save_result()
+
 
 
 if __name__ == '__main__':
@@ -70,5 +176,10 @@ if __name__ == '__main__':
 		type=argparse.FileType('w'),
 		default=DEFAULT_OUTPUT_FILE,
 		metavar='FILE')
+	parser.add_argument(
+		'-v',
+		'--verbose',
+		help='Enable verbose mode',
+		action='store_true')
 	args = parser.parse_args()
-	Vaccine(args.url, args.request, args.output)
+	Vaccine(args.url, args.request, args.output, args.verbose)
