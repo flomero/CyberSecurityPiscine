@@ -1,8 +1,11 @@
 #!./env/bin/python3
 
 import argparse
+from bs4 import BeautifulSoup
 
-DEFAULT_OUTPUT_FILE = 'report.txt'
+DEFAULT_OUTPUT_FILE = 'report.json'
+
+
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
@@ -26,4 +29,3 @@ if __name__ == '__main__':
 		default=DEFAULT_OUTPUT_FILE,
 		metavar='FILE')
 	args = parser.parse_args()
-	print(args.vaccine)
