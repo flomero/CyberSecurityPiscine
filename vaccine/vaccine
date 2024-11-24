@@ -2,6 +2,8 @@
 
 import argparse
 import difflib
+from re import S
+from unittest.mock import DEFAULT
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -11,6 +13,7 @@ from colorama import Fore, Style
 import time
 
 DEFAULT_OUTPUT_FILE = 'report.json'
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
 
 ERROR_STRINGS = [
 	"You have an error in your SQL syntax",  # MySQL
@@ -24,7 +27,7 @@ ERROR_STRINGS = [
 ]
 
 class Vaccine:
-	def __init__(self, url, request, output, verbose: bool, limit_diff: int):
+	def __init__(self, url, request, output, verbose: bool, limit_diff: int, agent: str):
 		self.url = url
 		self.request = request
 		self.output = output
@@ -43,7 +46,7 @@ class Vaccine:
 		}
 		self.session = requests.Session()
 		self.session.headers.update({
-			'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+			'User-Agent': agent
 		})
 		self.forms = self.get_forms()
 		try:
@@ -74,9 +77,13 @@ class Vaccine:
 			print(timestamp + ' ' + levels.get(level, "[UNKNOWN]") + " " + message)
 
 	def get_forms(self) -> typing.List[dict]:
-		response = self.session.get(self.url)
-		soup = BeautifulSoup(response.text, 'html.parser')
-		forms = soup.find_all('form')
+		try:
+			response = self.session.get(self.url)
+			soup = BeautifulSoup(response.text, 'html.parser')
+			forms = soup.find_all('form')
+		except Exception as e:
+			self.log('error', f'Error while getting forms: {e}')
+			raise SystemExit(1)
 		form_details = []
 
 		for form in forms:
@@ -154,7 +161,8 @@ class Vaccine:
 					'payload': test,
 					'error': error,
 					'formurl': form['action'],
-					'status': response.status_code
+					'status': response.status_code,
+					'formfields': form['inputs']
 				})
 				self.log('success', f'Found possible sql injection in {form["action"]} with payload {test}')
 
@@ -198,7 +206,8 @@ class Vaccine:
 						'payload': test,
 						'formurl': form['action'],
 						'status': response.status_code,
-						'diff': diff_lines
+						'diff': diff_lines,
+						'formfields': form['inputs']
 					})
 					self.log('success', f'Found possible sql injection in {form["action"]} with payload {test}')
 					self.log('verbose', f"Difference for payload {test}:\n{diff_lines}")
@@ -251,5 +260,14 @@ if __name__ == '__main__':
 		choices=range(1, 1000),
 		metavar='N'
 	)
+	parser.add_argument(
+		'-a',
+		'--agent',
+		help='The user agent to use',
+		default=DEFAULT_USER_AGENT,
+		metavar='AGENT',
+		type=str
+	)
+	
 	args = parser.parse_args()
-	Vaccine(args.url, args.request, args.output, args.verbose, args.limit_diff)
+	Vaccine(args.url, args.request, args.output, args.verbose, args.limit_diff, args.agent)
