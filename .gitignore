@@ -10,3 +10,6 @@ reverseme/bin/*
 /stockholm/src/*
 !/stockholm/src/Makefile
 !/stockholm/src/stockholm.py
+*.json
+*/__pycache__/*
+*.db

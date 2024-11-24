@@ -20,16 +20,16 @@ def init_db():
         conn.close()
 
 # Models
-class User(db.Model):
+class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(255), nullable=False)
     password = db.Column(db.String(255), nullable=False)
 
-class Post(db.Model):
+class Posts(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 
 @app.route("/", methods=["GET"])
@@ -40,13 +40,17 @@ def index():
     if name:
         try:
             query = f"SELECT * FROM users WHERE username = '{name}'"
-            results = db.engine.execute(query) # This is vulnerable to SQL injection
+            conn = sqlite3.connect('test.db')
+            cursor = conn.cursor()
+            cursor.execute(query)
+            results = cursor.fetchall()
         except Exception as e:
             error = str(e)
 
     return render_template("index.html", results=results, error=error)
 
 if __name__ == "__main__":
+    init_db()
     with app.app_context():
         db.create_all()
     app.run(host="0.0.0.0", port=8000)
