@@ -32,9 +32,12 @@ class Posts(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
-    name = request.args.get('name')
+    if request.method == "POST":
+        name = request.form['name']
+    else:
+        name = request.args.get('name')
     error = None
     results = None
     if name:

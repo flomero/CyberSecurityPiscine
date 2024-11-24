@@ -80,6 +80,10 @@ class Vaccine:
 		form_details = []
 
 		for form in forms:
+			#check method
+			if form.get('method').strip().upper() != self.request:
+				self.log('warning', f'Invalid method {form.get("method")}')
+				continue
 			action = form.get('action') if form.get('action') else self.url
 			if action.startswith('/'):
 				action = self.build_url(self.url, action)
@@ -185,6 +189,8 @@ class Vaccine:
 				diff_lines = [line for line in diff if line.startswith('+ ') or line.startswith('- ')]
 				# remove lines that are just + and spaces
 				diff_lines = [line for line in diff_lines if len(line.strip()) > 2]
+				for line in diff_lines:
+					self.find_db_type(line)
 				if len(diff_lines) > self.limit_diff:
 					diff_lines = diff_lines[:self.limit_diff]
 				if diff_lines:
@@ -242,7 +248,8 @@ if __name__ == '__main__':
 		help='Limit the number of different lines to show',
 		type=int,
 		default=30,
-		choices=range(1, 1000)
+		choices=range(1, 1000),
+		metavar='N'
 	)
 	args = parser.parse_args()
 	Vaccine(args.url, args.request, args.output, args.verbose, args.limit_diff)

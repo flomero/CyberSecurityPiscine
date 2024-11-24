@@ -11,9 +11,12 @@ app.config['MYSQL_DATABASE_HOST'] = 'db'
 
 mysql = MySQL(app)
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def index():
-    name = request.args.get('name')
+    if request.method == "POST":
+        name = request.form['name']
+    else:
+        name = request.args.get('name')
     error = None
     results = None
     if name:

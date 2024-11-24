@@ -7,8 +7,16 @@
 </head>
 <body>
     <h1>SQL Injection Vulnerable App</h1>
+    <h2>GET Form</h2>
     <p>Enter a username to search for:</p>
     <form method="get" action="/">
+        <input type="text" name="name" id="name" placeholder="Enter a username">
+        <button type="submit">Submit</button>
+    </form>
+
+    <h2>POST Form</h2>
+    <p>Enter a username to search for:</p>
+    <form method="post" action="/">
         <input type="text" name="name" id="name" placeholder="Enter a username">
         <button type="submit">Submit</button>
     </form>
