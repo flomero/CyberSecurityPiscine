@@ -1,7 +1,7 @@
 #!./env/bin/python3
 
 import argparse
-import stat
+import difflib
 from bs4 import BeautifulSoup
 import requests
 import json
@@ -13,22 +13,23 @@ import time
 DEFAULT_OUTPUT_FILE = 'report.json'
 
 ERROR_STRINGS = [
-    "You have an error in your SQL syntax",  # MySQL
-    "mysql_fetch_array()",  # MySQL
-    "SQL syntax",  # Generic error, especially for MySQL
-    "Warning: mysql_",  # MySQL errors
-    "invalid SQL statement",  # SQLite
-    "could not execute statement",  # SQLite
-    " syntax error",  # SQLite
-    "unrecognized token",  # SQLite
+	"You have an error in your SQL syntax",  # MySQL
+	"mysql_fetch_array()",  # MySQL
+	"SQL syntax",  # Generic error, especially for MySQL
+	"Warning: mysql_",  # MySQL errors
+	"invalid SQL statement",  # SQLite
+	"could not execute statement",  # SQLite
+	" syntax error",  # SQLite
+	"unrecognized token",  # SQLite
 ]
 
 class Vaccine:
-	def __init__(self, url, request, output, verbose: bool):
+	def __init__(self, url, request, output, verbose: bool, limit_diff: int):
 		self.url = url
 		self.request = request
 		self.output = output
 		self.verbose = verbose
+		self.limit_diff = limit_diff
 		self.result = {
 			'url': url,
 			'vulnerable': False,
@@ -132,13 +133,17 @@ class Vaccine:
 				data = {}
 				for input in form['inputs']:
 					data[input] = test
-				if form['method'] == 'GET':
-					response = self.session.get(form['action'], params=data)
-				elif form['method'] == 'POST':
-					response = self.session.post(form['action'], data=data)
+				try:
+					if form['method'] == 'GET':
+						response = self.session.get(form['action'], params=data)
+					elif form['method'] == 'POST':
+						response = self.session.post(form['action'], data=data)
+				except Exception as e:
+					self.log('error', f'Error while sending request: {e}')
+					continue
 				error = self.find_error(response)
 				if not error:
-					self.log('verbose', f'No error for payload {test}')
+					self.log('verbose', f'No error for {form["action"]} with payload {test}')
 					continue
 				self.find_db_type(response.text)
 				self.result['tests']['basic-error'].append({
@@ -147,14 +152,60 @@ class Vaccine:
 					'formurl': form['action'],
 					'status': response.status_code
 				})
-				self.log('success', f'Found possible sql injection in {form["action"]}')
+				self.log('success', f'Found possible sql injection in {form["action"]} with payload {test}')
+
+	def test_diff_payloads(self, key: str) -> None:
+		"""
+		Test payloads that use UNION SELECT to get data from the database
+		"""
+		for form in self.forms:
+			for test in test_injections[key]:
+				data = {}
+				for input in form['inputs']:
+					data[input] = '1'
+				try:
+					if form['method'] == 'GET':
+						response_no_inj = self.session.get(form['action'], params=data)
+					elif form['method'] == 'POST':
+						response_no_inj = self.session.post(form['action'], data=data)
+				except Exception as e:
+					self.log('error', f'Error while sending request: {e}')
+					continue
+				data[input] = test
+				try:
+					if form['method'] == 'GET':
+						response = self.session.get(form['action'], params=data)
+					elif form['method'] == 'POST':
+						response = self.session.post(form['action'], data=data)
+				except Exception as e:
+					self.log('error', f'Error while sending request: {e}')
+					continue
 				
+				diff = difflib.ndiff(response_no_inj.text.splitlines(), response.text.splitlines())
+				diff_lines = [line for line in diff if line.startswith('+ ') or line.startswith('- ')]
+				# remove lines that are just + and spaces
+				diff_lines = [line for line in diff_lines if len(line.strip()) > 2]
+				if len(diff_lines) > self.limit_diff:
+					diff_lines = diff_lines[:self.limit_diff]
+				if diff_lines:
+					self.result['tests'][key].append({
+						'payload': test,
+						'formurl': form['action'],
+						'status': response.status_code,
+						'diff': diff_lines
+					})
+					self.log('success', f'Found possible sql injection in {form["action"]} with payload {test}')
+					self.log('verbose', f"Difference for payload {test}:\n{diff_lines}")
+				else:
+					self.log('verbose', f"No significant difference for payload {test}")
 
 	def run(self) -> None:
 		if not self.forms:
 			self.log('error', 'No form found')
 			return
 		self.test_error_payloads()
+		self.test_diff_payloads('union')
+		self.test_diff_payloads('boolean')
 		self.save_result()
 
 
@@ -185,5 +236,13 @@ if __name__ == '__main__':
 		'--verbose',
 		help='Enable verbose mode',
 		action='store_true')
+	parser.add_argument(
+		'-l',
+		'--limit-diff',
+		help='Limit the number of different lines to show',
+		type=int,
+		default=30,
+		choices=range(1, 1000)
+	)
 	args = parser.parse_args()
-	Vaccine(args.url, args.request, args.output, args.verbose)
+	Vaccine(args.url, args.request, args.output, args.verbose, args.limit_diff)
